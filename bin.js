@@ -57,7 +57,12 @@ const result = commist()
             if (err) throw err
             console.log('The data has been uploaded')
             console.log('Use this link to share it:')
-            console.log(`${args['upload-url']}/public/${reply.id}/${htmlFile}`)
+            if (!args.ask) {
+              console.log(`${args['upload-url']}/public/${reply.id}/${htmlFile}`)
+            } else {
+              // TODO: Define the server URL for private stuff
+              console.log(`TO BE DEFINED. THE API RETURNED: ${reply.id}`)
+            }
           }
         )
       }, function (err) {
