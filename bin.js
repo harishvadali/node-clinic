@@ -17,7 +17,7 @@ const clean = require('./lib/clean')
 const authenticate = require('./lib/authenticate.js')
 
 const result = commist()
-  .register('upload', function (argv) {
+  .register('upload', async function (argv) {
     const args = minimist(argv, {
       alias: {
         help: 'h'
@@ -37,16 +37,16 @@ const result = commist()
     if (args.help) {
       printHelp('clinic-upload')
     } else if (args._.length > 0) {
-      async.eachSeries(args._, async function (filename) {
+      let authToken
+      if (args.ask) {
+        authToken = await authenticate(args['upload-url'])
+      }
+
+      async.eachSeries(args._, function (filename, done) {
         // filename may either be .clinic-doctor.html or the data directory
         // .clinic-doctor
         const filePrefix = path.join(filename).replace(/\.html$/, '')
         const htmlFile = path.basename(filename) + '.html'
-
-        let authToken
-        if (args.ask) {
-          authToken = await authenticate(args['upload-url'])
-        }
 
         console.log(`Uploading data for ${filePrefix} and ${filePrefix}.html`)
         tarAndUpload(
@@ -54,7 +54,7 @@ const result = commist()
           args['upload-url'],
           authToken,
           function (err, reply) {
-            if (err) throw err
+            if (err) return done(err)
             console.log('The data has been uploaded')
             console.log('Use this link to share it:')
             if (!args.ask) {
@@ -63,6 +63,7 @@ const result = commist()
               // TODO: Define the server URL for private stuff
               console.log(`TO BE DEFINED. THE API RETURNED: ${reply.id}`)
             }
+            done(null)
           }
         )
       }, function (err) {
