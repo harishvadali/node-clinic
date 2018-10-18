@@ -26,9 +26,7 @@ const result = commist()
         'upload-url'
       ],
       boolean: [
-        'ask'
-      ],
-      boolean: [
+        'ask',
         'help'
       ],
       default: {
@@ -46,7 +44,7 @@ const result = commist()
         const htmlFile = path.basename(filename) + '.html'
 
         let authToken
-        if (!!args.ask) {
+        if (args.ask) {
           authToken = await authenticate(args['upload-url'])
         }
 
