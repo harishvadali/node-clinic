@@ -14,6 +14,7 @@ const crypto = require('crypto')
 const tarAndUpload = require('./lib/tar-and-upload.js')
 const helpFormatter = require('./lib/help-formatter.js')
 const clean = require('./lib/clean')
+const authenticate = require('./lib/authenticate.js')
 
 const result = commist()
   .register('upload', function (argv) {
@@ -23,6 +24,9 @@ const result = commist()
       },
       string: [
         'upload-url'
+      ],
+      boolean: [
+        'ask'
       ],
       boolean: [
         'help'
@@ -35,22 +39,27 @@ const result = commist()
     if (args.help) {
       printHelp('clinic-upload')
     } else if (args._.length > 0) {
-      async.eachSeries(args._, function (filename, done) {
+      async.eachSeries(args._, async function (filename) {
         // filename may either be .clinic-doctor.html or the data directory
         // .clinic-doctor
         const filePrefix = path.join(filename).replace(/\.html$/, '')
         const htmlFile = path.basename(filename) + '.html'
 
+        let authToken
+        if (!!args.ask) {
+          authToken = await authenticate(args['upload-url'])
+        }
+
         console.log(`Uploading data for ${filePrefix} and ${filePrefix}.html`)
         tarAndUpload(
           path.resolve(filePrefix),
           args['upload-url'],
+          authToken,
           function (err, reply) {
-            if (err) return done(err)
+            if (err) throw err
             console.log('The data has been uploaded')
             console.log('Use this link to share it:')
             console.log(`${args['upload-url']}/public/${reply.id}/${htmlFile}`)
-            done(null)
           }
         )
       }, function (err) {

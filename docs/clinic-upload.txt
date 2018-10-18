@@ -16,3 +16,4 @@
 
   <h1>Flags</h1>
   -h | --help                Display Help
+  --ark                      Uploads in private upload server area (requires authentication)
