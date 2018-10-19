@@ -11,6 +11,7 @@ const execspawn = require('execspawn')
 const envString = require('env-string')
 const xargv = require('cross-argv')
 const crypto = require('crypto')
+const jwt = require('jsonwebtoken')
 const tarAndUpload = require('./lib/tar-and-upload.js')
 const helpFormatter = require('./lib/help-formatter.js')
 const clean = require('./lib/clean')
@@ -26,22 +27,15 @@ const result = commist()
         'upload-url'
       ],
       boolean: [
-        'ask',
         'help'
       ],
       default: {
         'upload-url': 'https://upload.clinicjs.org'
       }
     })
-
     if (args.help) {
       printHelp('clinic-upload')
     } else if (args._.length > 0) {
-      let authToken
-      if (args.ask) {
-        authToken = await authenticate(args['upload-url'])
-      }
-
       async.eachSeries(args._, function (filename, done) {
         // filename may either be .clinic-doctor.html or the data directory
         // .clinic-doctor
@@ -52,17 +46,60 @@ const result = commist()
         tarAndUpload(
           path.resolve(filePrefix),
           args['upload-url'],
-          authToken,
+          null,
           function (err, reply) {
             if (err) return done(err)
             console.log('The data has been uploaded')
             console.log('Use this link to share it:')
-            if (!args.ask) {
-              console.log(`${args['upload-url']}/public/${reply.id}/${htmlFile}`)
-            } else {
-              // TODO: Define the server URL for private stuff
-              console.log(`TO BE DEFINED. THE API RETURNED: ${reply.id}`)
-            }
+            console.log(`${args['upload-url']}/public/${reply.id}/${htmlFile}`)
+            done(null)
+          }
+        )
+      }, function (err) {
+        if (err) throw err
+      })
+    } else {
+      printHelp('clinic-upload')
+      process.exit(1)
+    }
+  })
+  .register('ask', async function (argv) {
+    const args = minimist(argv, {
+      alias: {
+        help: 'h'
+      },
+      string: [
+        'upload-url'
+      ],
+      boolean: [
+        'help'
+      ],
+      default: {
+        'upload-url': 'https://upload.clinicjs.org'
+      }
+    })
+
+    if (args.help) {
+      printHelp('clinic-ask')
+    } else if (args._.length > 0) {
+      const authToken = await authenticate(args['upload-url'])
+      const { email } = jwt.decode(authToken)
+
+      async.eachSeries(args._, function (filename, done) {
+        // filename may either be .clinic-doctor.html or the data directory
+        // .clinic-doctor
+        const filePrefix = path.join(filename).replace(/\.html$/, '')
+
+        console.log(`Uploading private data for user ${email} for ${filePrefix} and ${filePrefix}.html`)
+        tarAndUpload(
+          path.resolve(filePrefix),
+          args['upload-url'],
+          authToken,
+          function (err, reply) {
+            if (err) return done(err)
+            console.log(`The data has been uploaded to private area for user ${email}`)
+            // TODO: Define the server URL for private stuff
+            console.log(`MESSAGE HERE TO BE DEFINED (IF ANY). THE API RETURNED: ${reply.id}`)
             done(null)
           }
         )
